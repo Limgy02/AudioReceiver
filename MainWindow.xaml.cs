@@ -133,18 +133,18 @@ namespace AudioReceiver
                     var result = MessageBox.Show("Are you sure to delete saved files?", "Qusetion", MessageBoxButton.YesNo, MessageBoxImage.Question);
                     if (result == MessageBoxResult.Yes)
                     {
-                        bool success = false;
-                        try
+                        bool success = true;
+                        for (int i = 1; i <= channelCount; i++)
                         {
-                            for(int i = 1; i <= 4; i++)
+                            try
                             {
                                 File.Delete($"output{i}.txt");
                             }
-                            success = true;
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                            catch (Exception ex)
+                            {
+                                MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                                success = false;
+                            }
                         }
                         if (success)
                             MessageBox.Show("All files deleted successfully.", "Message", MessageBoxButton.OK, MessageBoxImage.Information);
