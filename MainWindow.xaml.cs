@@ -1,19 +1,9 @@
-﻿using ScottPlot;
-using ScottPlot.Plottables;
-using ScottPlot.WPF;
+﻿using ScottPlot.WPF;
 using System.IO;
 using System.IO.Ports;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Media.TextFormatting;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using System.Windows.Threading;
 
 namespace AudioReceiver
@@ -29,14 +19,19 @@ namespace AudioReceiver
         SerialPort serialPort;
         StreamWriter writer1, writer2, writer3, writer4;
 
-        const int bufferCount = 30000;
-
+        const int channelCount = 4;
+        const int bufferCount = 50000;
         const int receiveBufferCount = 400;
 
         List<float> buffer1 = Enumerable.Repeat(-1f, bufferCount).ToList();
         List<float> buffer2 = Enumerable.Repeat(-1f, bufferCount).ToList();
         List<float> buffer3 = Enumerable.Repeat(-1f, bufferCount).ToList();
         List<float> buffer4 = Enumerable.Repeat(-1f, bufferCount).ToList();
+
+        List<float> plotBuffer1 = Enumerable.Repeat(-1f, bufferCount).ToList();
+        List<float> plotBuffer2 = Enumerable.Repeat(-1f, bufferCount).ToList();
+        List<float> plotBuffer3 = Enumerable.Repeat(-1f, bufferCount).ToList();
+        List<float> plotBuffer4 = Enumerable.Repeat(-1f, bufferCount).ToList();
 
         List<int> x = Enumerable.Range(1, bufferCount).ToList();
 
@@ -56,19 +51,18 @@ namespace AudioReceiver
 
             Loaded += (s, e) =>
             {
+                wpfPlot_IEPE1.Plot.Add.ScatterLine(x, plotBuffer1);
+                wpfPlot_IEPE2.Plot.Add.ScatterLine(x, plotBuffer2);
+                wpfPlot_IEPE3.Plot.Add.ScatterLine(x, plotBuffer3);
+                wpfPlot_IEPE4.Plot.Add.ScatterLine(x, plotBuffer4);
+
                 List<WpfPlot> wpfPlots = GetAllWpfPlots(MainGrid);
                 foreach(var wpfPlot in wpfPlots)
                 {
-                    wpfPlot.Plot.Axes.SetLimits(0, bufferCount, 0, 3.3);
+                    wpfPlot.Plot.Axes.SetLimits(0, bufferCount, 0, 3);
                     wpfPlot.Plot.Axes.Bottom.Label.Text = "Ticks";
                     wpfPlot.Plot.Axes.Left.Label.Text = "Voltage(V)";
                 }
-
-                wpfPlot_IEPE1.Plot.Add.ScatterLine(x, buffer1);
-                wpfPlot_IEPE2.Plot.Add.ScatterLine(x, buffer2);
-                wpfPlot_IEPE3.Plot.Add.ScatterLine(x, buffer3);
-                wpfPlot_IEPE4.Plot.Add.ScatterLine(x, buffer4);
-
                 RefreshAllWpfPlots();
             };
 
@@ -171,6 +165,7 @@ namespace AudioReceiver
             if(isReceiving)
             {
                 isReceiving = false;
+                receiveThread.Join(); // Prevent StreamWriter closing before receiveThread really stopped.
                 StreamWritersClose();
                 serialPort.Close();
             }
@@ -182,6 +177,7 @@ namespace AudioReceiver
             button_DeleteSavedFiles.IsEnabled = !isReceiving;
             button_StartReceive.IsEnabled = !isReceiving;
             button_StopReceive.IsEnabled = isReceiving;
+            comboBox_AutoStop.IsEnabled = !isReceiving;
         }
 
         private void ReceiveLoop(object? obj)
@@ -272,9 +268,7 @@ namespace AudioReceiver
                 DependencyObject child = VisualTreeHelper.GetChild(parent, i);
 
                 if (child is WpfPlot plot)
-                {
                     wpfPlots.Add(plot);
-                }
 
                 wpfPlots.AddRange(GetAllWpfPlots(child));
             }
@@ -284,6 +278,21 @@ namespace AudioReceiver
 
         private void RefreshAllWpfPlots()
         {
+            // Use plotBuffer.Clear() and plotBuffer.AddRange(buffer) method instead of plotBuffer = buffer.ToList() method,
+            // otherwise wpfPlot will not refresh.
+            //
+            // Only use wpfPlot.Refresh() method consume a lot of time and cause lag in different channel
+            // depend on the order of refresh.
+
+            plotBuffer1.Clear();
+            plotBuffer1.AddRange(buffer1);
+            plotBuffer2.Clear();
+            plotBuffer2.AddRange(buffer2);
+            plotBuffer3.Clear();
+            plotBuffer3.AddRange(buffer3);
+            plotBuffer4.Clear();
+            plotBuffer4.AddRange(buffer4);
+
             wpfPlot_IEPE1.Refresh();
             wpfPlot_IEPE2.Refresh();
             wpfPlot_IEPE3.Refresh();
