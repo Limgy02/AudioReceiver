@@ -33,6 +33,11 @@
                     </ComboBox>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                    <CheckBox x:Name="checkBox_AppendWrite"
+                              Content="Append Write" IsChecked="False"
+                              VerticalAlignment="Center" Margin="0,0,10,0"
+                              HorizontalAlignment="Right"
+                              Checked="CheckBox_IsCheckedStatusChanged" Unchecked="CheckBox_IsCheckedStatusChanged"/>
                     <CheckBox x:Name="checkBox_SaveToFiles"
                               Content="Save To Files" IsChecked="False"
                               VerticalAlignment="Center" Margin="0,0,10,0"

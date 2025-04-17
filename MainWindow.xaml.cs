@@ -13,27 +13,25 @@ namespace AudioReceiver
     /// </summary>
     public partial class MainWindow : Window
     {
+        // User Configuration
+        const int channelCount = 4; // Number of channels
+        const int bufferCount = 50000; // Number of x-axis points
+        const int receiveBufferCount = 400; // The amount of data sent at one time of STM32 Dev Board (Current: 100 per channel, 4 channel)
+
         bool isReceiving = false;
         bool isFileSaveEnabled = false;
+        bool isAppendWriteEnabled = false;
 
         SerialPort serialPort;
-        StreamWriter writer1, writer2, writer3, writer4;
 
-        const int channelCount = 4;
-        const int bufferCount = 50000;
-        const int receiveBufferCount = 400;
+        List<StreamWriter> streamWriters = new List<StreamWriter>();
 
-        List<float> buffer1 = Enumerable.Repeat(-1f, bufferCount).ToList();
-        List<float> buffer2 = Enumerable.Repeat(-1f, bufferCount).ToList();
-        List<float> buffer3 = Enumerable.Repeat(-1f, bufferCount).ToList();
-        List<float> buffer4 = Enumerable.Repeat(-1f, bufferCount).ToList();
-
-        List<float> plotBuffer1 = Enumerable.Repeat(-1f, bufferCount).ToList();
-        List<float> plotBuffer2 = Enumerable.Repeat(-1f, bufferCount).ToList();
-        List<float> plotBuffer3 = Enumerable.Repeat(-1f, bufferCount).ToList();
-        List<float> plotBuffer4 = Enumerable.Repeat(-1f, bufferCount).ToList();
+        List<List<float>> buffers = new List<List<float>>();
+        List<List<float>> plotBuffers = new List<List<float>>();
 
         List<int> x = Enumerable.Range(1, bufferCount).ToList();
+
+        List<WpfPlot> wpfPlots = new List<WpfPlot>();
 
         private Thread receiveThread;
         private DispatcherTimer plotTimer;
@@ -42,26 +40,36 @@ namespace AudioReceiver
         {
             InitializeComponent();
 
+            // Initialize buffers & plotBuffers.
+            for(int i = 0; i < channelCount; i++)
+            {
+                buffers.Add(Enumerable.Repeat(-1f, bufferCount).ToList());
+                plotBuffers.Add(Enumerable.Repeat(-1f, bufferCount).ToList());
+            }
+
+            // Initialize serial port.
             serialPort = new SerialPort("COM4", 115200, Parity.None, 8, StopBits.One);
             serialPort.ReadBufferSize = 1024 * 64;
 
+            // Initialize plotTimer
             plotTimer = new DispatcherTimer();
             plotTimer.Interval = TimeSpan.FromMilliseconds(10);
             plotTimer.Tick += (sender, e) => { RefreshAllWpfPlots(); };
 
+            // Initialize wpfPlots
+            wpfPlots.AddRange(new List<WpfPlot>() { wpfPlot_IEPE1, wpfPlot_IEPE2, wpfPlot_IEPE3, wpfPlot_IEPE4});
+
+            // MainWindow Event Handler
             Loaded += (s, e) =>
             {
-                wpfPlot_IEPE1.Plot.Add.ScatterLine(x, plotBuffer1);
-                wpfPlot_IEPE2.Plot.Add.ScatterLine(x, plotBuffer2);
-                wpfPlot_IEPE3.Plot.Add.ScatterLine(x, plotBuffer3);
-                wpfPlot_IEPE4.Plot.Add.ScatterLine(x, plotBuffer4);
-
-                List<WpfPlot> wpfPlots = GetAllWpfPlots(MainGrid);
-                foreach(var wpfPlot in wpfPlots)
+                // Set configurations of wpfPlots
+                for (int i = 0; i < channelCount; i++)
                 {
-                    wpfPlot.Plot.Axes.SetLimits(0, bufferCount, 0, 3);
-                    wpfPlot.Plot.Axes.Bottom.Label.Text = "Ticks";
-                    wpfPlot.Plot.Axes.Left.Label.Text = "Voltage(V)";
+                    wpfPlots[i].Plot.Add.ScatterLine(x, plotBuffers[i]);
+
+                    wpfPlots[i].Plot.Axes.SetLimits(0, bufferCount, 0, 3);
+                    wpfPlots[i].Plot.Axes.Bottom.Label.Text = "Ticks";
+                    wpfPlots[i].Plot.Axes.Left.Label.Text = "Voltage(V)";
                 }
                 RefreshAllWpfPlots();
             };
@@ -155,6 +163,9 @@ namespace AudioReceiver
                 case "checkBox_SaveToFiles":
                     isFileSaveEnabled = checkBox_SaveToFiles.IsChecked ?? false;
                     break;
+                case "checkBox_AppendWrite":
+                    isAppendWriteEnabled = checkBox_AppendWrite.IsChecked ?? false;
+                    break;
                 default:
                     throw new NotImplementedException();
             }
@@ -195,62 +206,20 @@ namespace AudioReceiver
                         if (i + 4 <= buffer.Length)
                         {
                             float value = BitConverter.ToSingle(buffer, i);
-                            switch (index % 4)
+
+                            int currentChannel = index % 4;
+                            if (buffers[currentChannel].Count >= bufferCount)
                             {
-                                case 0:
-                                    if (buffer1.Count >= bufferCount)
-                                    {
-                                        buffer1.Insert(0, value);
-                                        buffer1.RemoveAt(buffer1.Count - 1);
-                                    }
-                                    else
-                                    {
-                                        ReplaceLastMinusOne(buffer1, value);
-                                    }
-                                    if (isFileSaveEnabled)
-                                        writer1.Write($"{value}\r\n");
-                                    break;
-                                case 1:
-                                    if (buffer2.Count >= bufferCount)
-                                    {
-                                        buffer2.Insert(0, value);
-                                        buffer2.RemoveAt(buffer2.Count - 1);
-                                    }
-                                    else
-                                    {
-                                        ReplaceLastMinusOne(buffer2, value);
-                                    }
-                                    if (isFileSaveEnabled)
-                                        writer2.Write($"{value}\r\n");
-                                    break;
-                                case 2:
-                                    if (buffer3.Count >= bufferCount)
-                                    {
-                                        buffer3.Insert(0, value);
-                                        buffer3.RemoveAt(buffer3.Count - 1);
-                                    }
-                                    else
-                                    {
-                                        ReplaceLastMinusOne(buffer3, value);
-                                    }
-                                    if (isFileSaveEnabled)
-                                        writer3.Write($"{value}\r\n");
-                                    break;
-                                case 3:
-                                    if (buffer4.Count >= bufferCount)
-                                    {
-                                        buffer4.Insert(0, value);
-                                        buffer4.RemoveAt(buffer4.Count - 1);
-                                    }
-                                    else
-                                    {
-                                        ReplaceLastMinusOne(buffer4, value);
-                                    }
-                                    if (isFileSaveEnabled)
-                                        writer4.Write($"{value}\r\n");
-                                    break;
-                                default:
-                                    break;
+                                buffers[currentChannel].Insert(0, value);
+                                buffers[currentChannel].RemoveAt(buffers[currentChannel].Count - 1);
+                            }
+                            else
+                            {
+                                ReplaceLastMinusOne(buffers[i], value);
+                            }
+                            if (isFileSaveEnabled)
+                            {
+                                streamWriters[currentChannel].Write($"{value}\r\n");
                             }
                         }
                         index++;
@@ -259,44 +228,20 @@ namespace AudioReceiver
             }
         }
 
-        public List<WpfPlot> GetAllWpfPlots(DependencyObject parent)
-        {
-            List<WpfPlot> wpfPlots = new List<WpfPlot>();
-
-            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
-            {
-                DependencyObject child = VisualTreeHelper.GetChild(parent, i);
-
-                if (child is WpfPlot plot)
-                    wpfPlots.Add(plot);
-
-                wpfPlots.AddRange(GetAllWpfPlots(child));
-            }
-
-            return wpfPlots;
-        }
-
         private void RefreshAllWpfPlots()
         {
-            // Use plotBuffer.Clear() and plotBuffer.AddRange(buffer) method instead of plotBuffer = buffer.ToList() method,
-            // otherwise wpfPlot will not refresh.
-            //
-            // Only use wpfPlot.Refresh() method consume a lot of time and cause lag in different channel
-            // depend on the order of refresh.
+            for(int i = 0; i < channelCount; i++)
+            {
+                // Use plotBuffer.Clear() and plotBuffer.AddRange(buffer) method instead of plotBuffer = buffer.ToList() method,
+                // otherwise wpfPlot will not refresh.
+                //
+                // Only use wpfPlot.Refresh() method consume a lot of time and cause lag in different channel
+                // depend on the order of refresh.
 
-            plotBuffer1.Clear();
-            plotBuffer1.AddRange(buffer1);
-            plotBuffer2.Clear();
-            plotBuffer2.AddRange(buffer2);
-            plotBuffer3.Clear();
-            plotBuffer3.AddRange(buffer3);
-            plotBuffer4.Clear();
-            plotBuffer4.AddRange(buffer4);
-
-            wpfPlot_IEPE1.Refresh();
-            wpfPlot_IEPE2.Refresh();
-            wpfPlot_IEPE3.Refresh();
-            wpfPlot_IEPE4.Refresh();
+                plotBuffers[i].Clear();
+                plotBuffers[i].AddRange(buffers[i]);
+                wpfPlots[i].Refresh();
+            }
         }
 
         private void ReplaceLastMinusOne(List<float> list, float value)
@@ -313,18 +258,19 @@ namespace AudioReceiver
 
         private void StreamWritersInit()
         {
-            writer1 = new StreamWriter("output1.txt", append: true);
-            writer2 = new StreamWriter("output2.txt", append: true);
-            writer3 = new StreamWriter("output3.txt", append: true);
-            writer4 = new StreamWriter("output4.txt", append: true);
+            for(int i = 0; i < channelCount; i++)
+            {
+                streamWriters.Add(new StreamWriter($"output{i + 1}.txt", append: isAppendWriteEnabled));
+            }
         }
 
         private void StreamWritersClose()
         {
-            writer1?.Close();
-            writer2?.Close();
-            writer3?.Close();
-            writer4?.Close();
+            for(int i = 0; i < streamWriters.Count; i++)
+            {
+                streamWriters[i]?.Close();
+            }
+            streamWriters.Clear();
         }
     }
 }
