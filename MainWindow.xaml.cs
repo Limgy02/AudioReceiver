@@ -340,10 +340,18 @@ namespace AudioReceiver
             Dispatcher.Invoke(new Action(() =>
             {
                 checkBox_SaveToFiles.IsEnabled = !isReceiving;
+                checkBox_AppendWrite.IsEnabled = !isReceiving;
+
+                // Buttons
                 button_DeleteSavedFiles.IsEnabled = !isReceiving;
                 button_StartReceive.IsEnabled = !isReceiving;
                 button_StopReceive.IsEnabled = isReceiving;
+                button_RefreshPortNames.IsEnabled = !isReceiving;
+
+                // ComboBoxs
                 comboBox_AutoStop.IsEnabled = !isReceiving;
+                comboBox_BufferCount.IsEnabled = !isReceiving;
+                comboBox_PortName.IsEnabled = !isReceiving;
             }));
         }
 
