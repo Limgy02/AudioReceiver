@@ -5,7 +5,7 @@ using System.IO.Ports;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
+using System.Windows.Interop;
 using System.Windows.Threading;
 
 namespace AudioReceiver
@@ -18,6 +18,10 @@ namespace AudioReceiver
         // User Configuration
         const int channelCount = 4; // Number of channels
         const int receiveBufferCount = 400; // The amount of data sent at one time of STM32 Dev Board (Current: 100 per channel, 4 channel)
+
+        public const int WM_DEVICECHANGE = 0x0219;
+        public const int DBT_DEVICEARRIVAL = 0x8000; // USB Device Connect
+        public const int DBT_DEVICEREMOVECOMPLETE = 0x8004; // USB Device Disconnect
 
         bool isReceiving = false;
         bool isFileSaveEnabled = false;
@@ -65,9 +69,20 @@ namespace AudioReceiver
             plotTimer.Tick += (sender, e) => { RefreshAllWpfPlots(WpfPlotsRefreshType.DoNotSetAxesLimits); };
 
             // Initialize wpfPlots
-            wpfPlots.AddRange(new List<WpfPlot>() { wpfPlot_IEPE1, wpfPlot_IEPE2, wpfPlot_IEPE3, wpfPlot_IEPE4});
+            wpfPlots.AddRange(new List<WpfPlot>() { wpfPlot_IEPE1, wpfPlot_IEPE2, wpfPlot_IEPE3, wpfPlot_IEPE4 });
 
             // MainWindow Event Handler
+
+            // Add message hook for monitor of USB devices.
+            SourceInitialized += (s, e) =>
+            {
+                var windowInteropHelper = new WindowInteropHelper(this);
+                var hwnd = windowInteropHelper.Handle;
+
+                HwndSource source = HwndSource.FromHwnd(hwnd);
+                source.AddHook(Hook);
+            };
+
             Loaded += (s, e) =>
             {
                 // Add scatter line for wpfPlots
@@ -92,6 +107,25 @@ namespace AudioReceiver
                 StopReceive();
                 StreamWritersClose();
             };
+        }
+
+        private IntPtr Hook(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, ref bool handled)
+        {
+            if (msg == WM_DEVICECHANGE)
+            {
+                int eventType = wparam.ToInt32();
+
+                switch (eventType)
+                {
+                    case DBT_DEVICEARRIVAL:
+                    case DBT_DEVICEREMOVECOMPLETE:
+                        LoadAvailablePorts();
+                        break;
+                    default:
+                        break;
+                }
+            }
+            return IntPtr.Zero;
         }
 
         private void Button_Click(object sender, EventArgs e)
