@@ -1,4 +1,5 @@
 ﻿using ScottPlot.WPF;
+using System.Buffers;
 using System.IO;
 using System.IO.Ports;
 using System.Text.RegularExpressions;
@@ -244,7 +245,8 @@ namespace AudioReceiver
             if(isReceiving)
             {
                 isReceiving = false;
-                receiveThread!.Join(); // Prevent StreamWriter closing before receiveThread really stopped.
+                if(Thread.CurrentThread.ManagedThreadId != receiveThread?.ManagedThreadId)
+                    receiveThread!.Join(); // Prevent StreamWriter closing before receiveThread really stopped.
                 StreamWritersClose();
                 serialPort!.Close();
             }
@@ -252,46 +254,58 @@ namespace AudioReceiver
 
         private void RefreshUIComponents()
         {
-            checkBox_SaveToFiles.IsEnabled = !isReceiving;
-            button_DeleteSavedFiles.IsEnabled = !isReceiving;
-            button_StartReceive.IsEnabled = !isReceiving;
-            button_StopReceive.IsEnabled = isReceiving;
-            comboBox_AutoStop.IsEnabled = !isReceiving;
+            Dispatcher.Invoke(new Action(() =>
+            {
+                checkBox_SaveToFiles.IsEnabled = !isReceiving;
+                button_DeleteSavedFiles.IsEnabled = !isReceiving;
+                button_StartReceive.IsEnabled = !isReceiving;
+                button_StopReceive.IsEnabled = isReceiving;
+                comboBox_AutoStop.IsEnabled = !isReceiving;
+            }));
         }
 
         private void ReceiveLoop(object? obj)
         {
+            var buffer = ArrayPool<byte>.Shared.Rent(4 * receiveBufferCount);
             while (isReceiving)
             {
-                byte[] buffer = new byte[4 * receiveBufferCount];
-                if(serialPort!.BytesToRead >= buffer.Length)
+                try
                 {
+                    if (serialPort!.BytesToRead < buffer.Length)
+                        continue;
                     serialPort.Read(buffer, 0, buffer.Length);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Serial port read failed, please check connection of the device.\r\n\r\n" +
+                        $"Message:\r\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    StopReceive();
+                    RefreshUIComponents();
+                }
 
-                    int index = 0;
-                    for (int i = 0; i < buffer.Length; i += 4)
+                int index = 0;
+                for (int i = 0; i < buffer.Length; i += 4)
+                {
+                    if (i + 4 <= buffer.Length)
                     {
-                        if (i + 4 <= buffer.Length)
-                        {
-                            float value = BitConverter.ToSingle(buffer, i);
+                        float value = BitConverter.ToSingle(buffer, i);
 
-                            int currentChannel = index % 4;
-                            if (buffers[currentChannel].Count >= bufferCount)
-                            {
-                                buffers[currentChannel].Insert(0, value);
-                                buffers[currentChannel].RemoveAt(buffers[currentChannel].Count - 1);
-                            }
-                            else
-                            {
-                                ReplaceLastMinusOne(buffers[i], value);
-                            }
-                            if (isFileSaveEnabled)
-                            {
-                                streamWriters[currentChannel].Write($"{value}\r\n");
-                            }
+                        int currentChannel = index % 4;
+                        if (buffers[currentChannel].Count >= bufferCount)
+                        {
+                            buffers[currentChannel].Insert(0, value);
+                            buffers[currentChannel].RemoveAt(buffers[currentChannel].Count - 1);
                         }
-                        index++;
+                        else
+                        {
+                            ReplaceLastMinusOne(buffers[i], value);
+                        }
+                        if (isFileSaveEnabled)
+                        {
+                            streamWriters[currentChannel].Write($"{value}\r\n");
+                        }
                     }
+                    index++;
                 }
             }
         }
