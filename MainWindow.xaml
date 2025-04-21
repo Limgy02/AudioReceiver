@@ -9,47 +9,53 @@
         Title="AudioReceiver" Height="450" Width="800">
     <Grid x:Name="MainGrid" Margin="10">
         <DockPanel>
-            <DockPanel DockPanel.Dock="Top">
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                    <Button x:Name="button_StartReceive"
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="0,0,0,10">
+                <Button x:Name="button_StartReceive"
                             Content="Start Receive" Style="{StaticResource DefaultButtonStyle}"
                             Margin="0,0,10,0" HorizontalAlignment="Left"
                             Click="Button_Click"/>
-                    <Button x:Name="button_StopReceive"
+                <Button x:Name="button_StopReceive"
                             Content="Stop Receive" Style="{StaticResource DefaultButtonStyle}"
                             HorizontalAlignment="Left"
                             IsEnabled="False"
                             Click="Button_Click"/>
-                    <TextBlock Text="Auto stop in: "
+                <TextBlock Text="Auto stop in: "
                                    VerticalAlignment="Center" Margin="10,0,0,0"/>
-                    <ComboBox x:Name="comboBox_AutoStop" Style="{StaticResource DefaultComboBoxStyle}"
+                <ComboBox x:Name="comboBox_AutoStop" Style="{StaticResource DefaultComboBoxStyle}"
                                   VerticalContentAlignment="Center"
                                   Margin="10 0 0 0" SelectedIndex="0">
-                        <ComboBoxItem Content="null"/>
-                        <ComboBoxItem Content="1 sec"/>
-                        <ComboBoxItem Content="5 sec"/>
-                        <ComboBoxItem Content="10 sec"/>
-                        <ComboBoxItem Content="30 sec"/>
-                    </ComboBox>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                    <CheckBox x:Name="checkBox_AppendWrite"
+                    <ComboBoxItem Content="null"/>
+                    <ComboBoxItem Content="1 sec"/>
+                    <ComboBoxItem Content="5 sec"/>
+                    <ComboBoxItem Content="10 sec"/>
+                    <ComboBoxItem Content="30 sec"/>
+                </ComboBox>
+                <TextBlock Text="Port Name:"
+                                   VerticalAlignment="Center" Margin="10,0,0,0"/>
+                <ComboBox x:Name="comboBox_PortName" Style="{StaticResource DefaultComboBoxStyle}"
+                                  VerticalContentAlignment="Center"
+                                  Margin="10 0 0 0" SelectedIndex="0" SelectionChanged="Combox_SelectionChanged"/>
+                <Button x:Name="button_RefreshPortNames" Style="{StaticResource DefaultButtonStyle}"
+                        VerticalAlignment="Center" Margin="10 0 0 0" Width="24"
+                        FontFamily="Segoe MDL2 Assets" Content=""
+                        Click="Button_Click"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Top">
+                <Button x:Name="button_DeleteSavedFiles"
+                            Content="Delete Saved Files" Style="{StaticResource DefaultButtonStyle}" Width="120"
+                            Background="LightCoral" Margin="0,0,10,0"
+                            Click="Button_Click"/>
+                <CheckBox x:Name="checkBox_AppendWrite"
                               Content="Append Write" IsChecked="False"
                               VerticalAlignment="Center" Margin="0,0,10,0"
                               HorizontalAlignment="Right"
                               Checked="CheckBox_IsCheckedStatusChanged" Unchecked="CheckBox_IsCheckedStatusChanged"/>
-                    <CheckBox x:Name="checkBox_SaveToFiles"
+                <CheckBox x:Name="checkBox_SaveToFiles"
                               Content="Save To Files" IsChecked="False"
-                              VerticalAlignment="Center" Margin="0,0,10,0"
+                              VerticalAlignment="Center"
                               HorizontalAlignment="Right"
                               Checked="CheckBox_IsCheckedStatusChanged" Unchecked="CheckBox_IsCheckedStatusChanged"/>
-                    <Button x:Name="button_DeleteSavedFiles"
-                            Content="Delete Saved Files" Style="{StaticResource DefaultButtonStyle}" Width="120"
-                            Background="LightCoral"
-                            Click="Button_Click"/>
-                </StackPanel>
-                <Canvas/>
-            </DockPanel>
+            </StackPanel>
             <Grid Margin="0,10,0,0">
                 <Grid.RowDefinitions>
                     <RowDefinition/>

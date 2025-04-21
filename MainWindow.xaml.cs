@@ -1,6 +1,7 @@
 ﻿using ScottPlot.WPF;
 using System.IO;
 using System.IO.Ports;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -22,7 +23,7 @@ namespace AudioReceiver
         bool isFileSaveEnabled = false;
         bool isAppendWriteEnabled = false;
 
-        SerialPort serialPort;
+        SerialPort? serialPort;
 
         List<StreamWriter> streamWriters = new List<StreamWriter>();
 
@@ -48,8 +49,8 @@ namespace AudioReceiver
             }
 
             // Initialize serial port.
-            serialPort = new SerialPort("COM4", 115200, Parity.None, 8, StopBits.One);
-            serialPort.ReadBufferSize = 1024 * 64;
+            LoadAvailablePorts();
+            SerialPortInit();
 
             // Initialize plotTimer
             plotTimer = new DispatcherTimer();
@@ -86,6 +87,8 @@ namespace AudioReceiver
             switch (((Button)sender).Name)
             {
                 case "button_StartReceive":
+                    if (!TestSerialPortAvaliableOrNot(serialPort))
+                        return;
                     isReceiving = true;
                     if (checkBox_SaveToFiles.IsChecked == true)
                         StreamWritersInit();
@@ -150,6 +153,9 @@ namespace AudioReceiver
                             MessageBox.Show("All files deleted successfully.", "Message", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
                     break;
+                case "button_RefreshPortNames":
+                    LoadAvailablePorts();
+                    break;
                 default:
                     throw new NotImplementedException();
             }
@@ -169,6 +175,68 @@ namespace AudioReceiver
                 default:
                     throw new NotImplementedException();
             }
+        }
+
+        private void Combox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            switch (((ComboBox)sender).Name)
+            {
+                case "comboBox_PortName":
+                    SerialPortInit();
+                    break;
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
+        private void SerialPortInit()
+        {
+            string? portName = comboBox_PortName.SelectedItem?.ToString();
+            if (Regex.IsMatch(portName ?? "", @"^COM\d+$"))
+            {
+                serialPort = new SerialPort(portName, 115200, Parity.None, 8, StopBits.One);
+                serialPort.ReadBufferSize = 1024 * 64;
+            }
+            else
+                serialPort = null;
+        }
+
+        private void LoadAvailablePorts()
+        {
+            comboBox_PortName.Items.Clear();
+            foreach(string port in SerialPort.GetPortNames())
+            {
+                comboBox_PortName.Items.Add(port);
+            }
+            if (comboBox_PortName.Items.Count > 0)
+            {
+                comboBox_PortName.SelectedIndex = 0;
+            }
+        }
+
+        private bool TestSerialPortAvaliableOrNot(SerialPort serialPort)
+        {
+            if(serialPort is null)
+            {
+                MessageBox.Show("Serial Port have not been initialized, " +
+                    "please check device connection status and " +
+                    "select correct port name.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+
+            bool isSerialPortAvaliable = true;
+            try
+            {
+                serialPort.Open();
+            }
+            catch (Exception ex)
+            {
+                isSerialPortAvaliable = false;
+                MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            if (isSerialPortAvaliable)
+                serialPort.Close();
+            return isSerialPortAvaliable;
         }
 
         private void StopReceive()
