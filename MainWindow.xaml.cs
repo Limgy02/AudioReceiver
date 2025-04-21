@@ -17,12 +17,13 @@ namespace AudioReceiver
     {
         // User Configuration
         const int channelCount = 4; // Number of channels
-        const int bufferCount = 50000; // Number of x-axis points
         const int receiveBufferCount = 400; // The amount of data sent at one time of STM32 Dev Board (Current: 100 per channel, 4 channel)
 
         bool isReceiving = false;
         bool isFileSaveEnabled = false;
         bool isAppendWriteEnabled = false;
+
+        int bufferCount; // Number of x-axis points
 
         SerialPort? serialPort;
 
@@ -31,7 +32,7 @@ namespace AudioReceiver
         List<List<float>> buffers = new List<List<float>>();
         List<List<float>> plotBuffers = new List<List<float>>();
 
-        List<int> x = Enumerable.Range(1, bufferCount).ToList();
+        List<int> x = new List<int>();
 
         List<WpfPlot> wpfPlots = new List<WpfPlot>();
 
@@ -42,12 +43,11 @@ namespace AudioReceiver
         {
             InitializeComponent();
 
-            // Initialize buffers & plotBuffers.
-            for(int i = 0; i < channelCount; i++)
-            {
-                buffers.Add(Enumerable.Repeat(-1f, bufferCount).ToList());
-                plotBuffers.Add(Enumerable.Repeat(-1f, bufferCount).ToList());
-            }
+            // Initialize bufferCount
+            bufferCount = Convert.ToInt32(((ComboBoxItem)comboBox_BufferCount.SelectedItem).Content.ToString());
+
+            // Initialize x, buffers & plotBuffers.
+            BuffersInit();
 
             // Initialize serial port.
             LoadAvailablePorts();
@@ -64,16 +64,21 @@ namespace AudioReceiver
             // MainWindow Event Handler
             Loaded += (s, e) =>
             {
+                // Add scatter line for wpfPlots
+                AddScatterLineForWpfPlots();
+
                 // Set configurations of wpfPlots
                 for (int i = 0; i < channelCount; i++)
                 {
-                    wpfPlots[i].Plot.Add.ScatterLine(x, plotBuffers[i]);
-
                     wpfPlots[i].Plot.Axes.SetLimits(0, bufferCount, 0, 3);
                     wpfPlots[i].Plot.Axes.Bottom.Label.Text = "Ticks";
                     wpfPlots[i].Plot.Axes.Left.Label.Text = "Voltage(V)";
                 }
                 RefreshAllWpfPlots();
+
+                // Add event handler for ComboBoxs, prevent which SelectionChanged event trigger when MainWindow loading.
+                comboBox_PortName.SelectionChanged += Combox_SelectionChanged;
+                comboBox_BufferCount.SelectionChanged += Combox_SelectionChanged;
             };
 
             Closing += (s, e) =>
@@ -185,8 +190,36 @@ namespace AudioReceiver
                 case "comboBox_PortName":
                     SerialPortInit();
                     break;
+                case "comboBox_BufferCount":
+                    bufferCount = Convert.ToInt32(((ComboBoxItem)comboBox_BufferCount.SelectedItem).Content.ToString());
+                    BuffersInit();
+                    AddScatterLineForWpfPlots();
+                    RefreshAllWpfPlots();
+                    break;
                 default:
                     throw new NotImplementedException();
+            }
+        }
+
+        private void BuffersInit()
+        {
+            x = Enumerable.Range(1, bufferCount).ToList();
+
+            buffers.Clear();
+            plotBuffers.Clear();
+            for (int i = 0; i < channelCount; i++)
+            {
+                buffers.Add(Enumerable.Repeat(-1f, bufferCount).ToList());
+                plotBuffers.Add(Enumerable.Repeat(-1f, bufferCount).ToList());
+            }
+        }
+
+        private void AddScatterLineForWpfPlots()
+        {
+            for (int i = 0; i < channelCount; i++)
+            {
+                wpfPlots[i].Plot.Clear();
+                wpfPlots[i].Plot.Add.ScatterLine(x, plotBuffers[i]);
             }
         }
 
@@ -298,7 +331,7 @@ namespace AudioReceiver
                         }
                         else
                         {
-                            ReplaceLastMinusOne(buffers[i], value);
+                            ReplaceLastMinusOne(buffers[currentChannel], value);
                         }
                         if (isFileSaveEnabled)
                         {
@@ -322,6 +355,7 @@ namespace AudioReceiver
 
                 plotBuffers[i].Clear();
                 plotBuffers[i].AddRange(buffers[i]);
+                wpfPlots[i].Plot.Axes.SetLimitsX(0, bufferCount);
                 wpfPlots[i].Refresh();
             }
         }

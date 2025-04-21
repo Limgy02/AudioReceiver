@@ -34,11 +34,23 @@
                                    VerticalAlignment="Center" Margin="10,0,0,0"/>
                 <ComboBox x:Name="comboBox_PortName" Style="{StaticResource DefaultComboBoxStyle}"
                                   VerticalContentAlignment="Center"
-                                  Margin="10 0 0 0" SelectedIndex="0" SelectionChanged="Combox_SelectionChanged"/>
+                                  Margin="10 0 0 0" SelectedIndex="0"/>
                 <Button x:Name="button_RefreshPortNames" Style="{StaticResource DefaultButtonStyle}"
                         VerticalAlignment="Center" Margin="10 0 0 0" Width="24"
                         FontFamily="Segoe MDL2 Assets" Content=""
                         Click="Button_Click"/>
+                <TextBlock Text="X-Axis Point:"
+                                   VerticalAlignment="Center" Margin="10,0,0,0"/>
+                <ComboBox x:Name="comboBox_BufferCount" Style="{StaticResource DefaultComboBoxStyle}"
+                                  VerticalContentAlignment="Center"
+                                  Margin="10 0 0 0" SelectedIndex="3">
+                    <ComboBoxItem Content="5000"/>
+                    <ComboBoxItem Content="10000"/>
+                    <ComboBoxItem Content="20000"/>
+                    <ComboBoxItem Content="30000"/>
+                    <ComboBoxItem Content="40000"/>
+                    <ComboBoxItem Content="50000"/>
+                </ComboBox>
             </StackPanel>
             <StackPanel Orientation="Horizontal" DockPanel.Dock="Top">
                 <Button x:Name="button_DeleteSavedFiles"
