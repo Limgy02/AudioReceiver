@@ -6,39 +6,64 @@
         xmlns:local="clr-namespace:AudioReceiver"
         xmlns:ScottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
         mc:Ignorable="d"
-        Title="AudioReceiver" Height="450" Width="800">
+        Title="AudioReceiver" Height="720" Width="1024">
     <Grid x:Name="MainGrid" Margin="10">
         <DockPanel>
-            <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="0,0,0,10">
-                <Button x:Name="button_StartReceive"
+            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                    <Button x:Name="button_StartReceive"
                             Content="Start Receive" Style="{StaticResource DefaultButtonStyle}"
                             Margin="0,0,10,0" HorizontalAlignment="Left"
                             Click="Button_Click"/>
-                <Button x:Name="button_StopReceive"
+                    <Button x:Name="button_StopReceive"
                             Content="Stop Receive" Style="{StaticResource DefaultButtonStyle}"
                             HorizontalAlignment="Left"
                             IsEnabled="False"
                             Click="Button_Click"/>
-                <TextBlock Text="Auto stop in: "
-                                   VerticalAlignment="Center" Margin="10,0,0,0"/>
-                <ComboBox x:Name="comboBox_AutoStop" Style="{StaticResource DefaultComboBoxStyle}"
-                                  VerticalContentAlignment="Center"
-                                  Margin="10 0 0 0" SelectedIndex="0">
-                    <ComboBoxItem Content="null"/>
-                    <ComboBoxItem Content="1 sec"/>
-                    <ComboBoxItem Content="5 sec"/>
-                    <ComboBoxItem Content="10 sec"/>
-                    <ComboBoxItem Content="30 sec"/>
-                </ComboBox>
+
+                    <Rectangle Style="{StaticResource Divider}"/>
+
+                    <TextBlock Text="Auto stop in: "
+                   VerticalAlignment="Center"/>
+                    <ComboBox x:Name="comboBox_AutoStop" Style="{StaticResource DefaultComboBoxStyle}"
+                  VerticalContentAlignment="Center"
+                  Margin="10 0 0 0" SelectedIndex="0">
+                        <ComboBoxItem Content="null"/>
+                        <ComboBoxItem Content="1 sec"/>
+                        <ComboBoxItem Content="5 sec"/>
+                        <ComboBoxItem Content="10 sec"/>
+                        <ComboBoxItem Content="30 sec"/>
+                    </ComboBox>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                    <CheckBox x:Name="checkBox_AppendWrite"
+                              Content="Append Write" IsChecked="False"
+                              VerticalAlignment="Center" Margin="0,0,10,0"
+                              HorizontalAlignment="Right"
+                              Checked="CheckBox_IsCheckedStatusChanged" Unchecked="CheckBox_IsCheckedStatusChanged"/>
+                    <CheckBox x:Name="checkBox_SaveToFiles"
+                              Content="Save To Files" IsChecked="False"
+                              VerticalAlignment="Center"
+                              HorizontalAlignment="Right"
+                              Checked="CheckBox_IsCheckedStatusChanged" Unchecked="CheckBox_IsCheckedStatusChanged"/>
+                    <Button x:Name="button_DeleteSavedFiles"
+                            Content="Delete Saved Files" Style="{StaticResource DefaultButtonStyle}" Width="120"
+                            Background="LightCoral" Margin="10,0,0,0"
+                            Click="Button_Click"/>
+                </StackPanel>
+                <Canvas/>
+            </DockPanel>
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Top">
                 <TextBlock Text="Port Name:"
                                    VerticalAlignment="Center" Margin="10,0,0,0"/>
                 <ComboBox x:Name="comboBox_PortName" Style="{StaticResource DefaultComboBoxStyle}"
                                   VerticalContentAlignment="Center"
                                   Margin="10 0 0 0" SelectedIndex="0"/>
-                <Button x:Name="button_RefreshPortNames" Style="{StaticResource DefaultButtonStyle}"
-                        VerticalAlignment="Center" Margin="10 0 0 0" Width="24"
-                        FontFamily="Segoe MDL2 Assets" Content=""
+                <Button x:Name="button_RefreshPortNames" Style="{StaticResource ResetButton}"
+                        VerticalAlignment="Center" Margin="10 0 0 0"
                         Click="Button_Click"/>
+                <Rectangle Style="{StaticResource Divider}"/>
+
                 <TextBlock Text="X-Axis Point:"
                                    VerticalAlignment="Center" Margin="10,0,0,0"/>
                 <ComboBox x:Name="comboBox_BufferCount" Style="{StaticResource DefaultComboBoxStyle}"
@@ -52,22 +77,6 @@
                     <ComboBoxItem Content="50000"/>
                 </ComboBox>
             </StackPanel>
-            <StackPanel Orientation="Horizontal" DockPanel.Dock="Top">
-                <Button x:Name="button_DeleteSavedFiles"
-                            Content="Delete Saved Files" Style="{StaticResource DefaultButtonStyle}" Width="120"
-                            Background="LightCoral" Margin="0,0,10,0"
-                            Click="Button_Click"/>
-                <CheckBox x:Name="checkBox_AppendWrite"
-                              Content="Append Write" IsChecked="False"
-                              VerticalAlignment="Center" Margin="0,0,10,0"
-                              HorizontalAlignment="Right"
-                              Checked="CheckBox_IsCheckedStatusChanged" Unchecked="CheckBox_IsCheckedStatusChanged"/>
-                <CheckBox x:Name="checkBox_SaveToFiles"
-                              Content="Save To Files" IsChecked="False"
-                              VerticalAlignment="Center"
-                              HorizontalAlignment="Right"
-                              Checked="CheckBox_IsCheckedStatusChanged" Unchecked="CheckBox_IsCheckedStatusChanged"/>
-            </StackPanel>
             <Grid Margin="0,10,0,0">
                 <Grid.RowDefinitions>
                     <RowDefinition/>
@@ -75,10 +84,27 @@
                     <RowDefinition/>
                     <RowDefinition/>
                 </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="40"/>
+                </Grid.ColumnDefinitions>
                 <ScottPlot:WpfPlot x:Name="wpfPlot_IEPE1" Grid.Row="0" Grid.Column="0"/>
                 <ScottPlot:WpfPlot x:Name="wpfPlot_IEPE2" Grid.Row="1" Grid.Column="0"/>
                 <ScottPlot:WpfPlot x:Name="wpfPlot_IEPE3" Grid.Row="2" Grid.Column="0"/>
                 <ScottPlot:WpfPlot x:Name="wpfPlot_IEPE4" Grid.Row="3" Grid.Column="0"/>
+
+                <Button x:Name="button_WpfPlot_IEPE1_AxesLimits_Reset" Tag="0"
+                        Style="{StaticResource ResetButton}" Grid.Row="0" Grid.Column="1"
+                        Click="Button_Click"/>
+                <Button x:Name="button_WpfPlot_IEPE2_AxesLimits_Reset" Tag="1"
+                        Style="{StaticResource ResetButton}" Grid.Row="1" Grid.Column="1"
+                        Click="Button_Click"/>
+                <Button x:Name="button_WpfPlot_IEPE3_AxesLimits_Reset" Tag="2"
+                        Style="{StaticResource ResetButton}" Grid.Row="2" Grid.Column="1"
+                        Click="Button_Click"/>
+                <Button x:Name="button_WpfPlot_IEPE4_AxesLimits_Reset" Tag="3"
+                        Style="{StaticResource ResetButton}" Grid.Row="3" Grid.Column="1"
+                        Click="Button_Click"/>
             </Grid>
         </DockPanel>
     </Grid>

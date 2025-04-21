@@ -39,6 +39,12 @@ namespace AudioReceiver
         private Thread? receiveThread;
         private DispatcherTimer plotTimer;
 
+        enum WpfPlotsRefreshType
+        {
+            SetAxesLimits,
+            DoNotSetAxesLimits
+        }
+
         public MainWindow()
         {
             InitializeComponent();
@@ -56,7 +62,7 @@ namespace AudioReceiver
             // Initialize plotTimer
             plotTimer = new DispatcherTimer();
             plotTimer.Interval = TimeSpan.FromMilliseconds(10);
-            plotTimer.Tick += (sender, e) => { RefreshAllWpfPlots(); };
+            plotTimer.Tick += (sender, e) => { RefreshAllWpfPlots(WpfPlotsRefreshType.DoNotSetAxesLimits); };
 
             // Initialize wpfPlots
             wpfPlots.AddRange(new List<WpfPlot>() { wpfPlot_IEPE1, wpfPlot_IEPE2, wpfPlot_IEPE3, wpfPlot_IEPE4});
@@ -74,7 +80,7 @@ namespace AudioReceiver
                     wpfPlots[i].Plot.Axes.Bottom.Label.Text = "Ticks";
                     wpfPlots[i].Plot.Axes.Left.Label.Text = "Voltage(V)";
                 }
-                RefreshAllWpfPlots();
+                RefreshAllWpfPlots(WpfPlotsRefreshType.SetAxesLimits);
 
                 // Add event handler for ComboBoxs, prevent which SelectionChanged event trigger when MainWindow loading.
                 comboBox_PortName.SelectionChanged += Combox_SelectionChanged;
@@ -83,8 +89,8 @@ namespace AudioReceiver
 
             Closing += (s, e) =>
             {
+                StopReceive();
                 StreamWritersClose();
-                plotTimer.Stop();
             };
         }
 
@@ -162,6 +168,15 @@ namespace AudioReceiver
                 case "button_RefreshPortNames":
                     LoadAvailablePorts();
                     break;
+                case "button_WpfPlot_IEPE1_AxesLimits_Reset":
+                case "button_WpfPlot_IEPE2_AxesLimits_Reset":
+                case "button_WpfPlot_IEPE3_AxesLimits_Reset":
+                case "button_WpfPlot_IEPE4_AxesLimits_Reset":
+                    WpfPlot currentWpfPlot = wpfPlots[Convert.ToInt32(((Button)sender).Tag)];
+                    currentWpfPlot.Plot.Axes.SetLimitsX(0, bufferCount);
+                    currentWpfPlot.Plot.Axes.SetLimitsY(0, 3);
+                    currentWpfPlot.Refresh();
+                    break;
                 default:
                     throw new NotImplementedException();
             }
@@ -194,7 +209,7 @@ namespace AudioReceiver
                     bufferCount = Convert.ToInt32(((ComboBoxItem)comboBox_BufferCount.SelectedItem).Content.ToString());
                     BuffersInit();
                     AddScatterLineForWpfPlots();
-                    RefreshAllWpfPlots();
+                    RefreshAllWpfPlots(WpfPlotsRefreshType.SetAxesLimits);
                     break;
                 default:
                     throw new NotImplementedException();
@@ -282,6 +297,7 @@ namespace AudioReceiver
                     receiveThread!.Join(); // Prevent StreamWriter closing before receiveThread really stopped.
                 StreamWritersClose();
                 serialPort!.Close();
+                plotTimer.Stop();
             }
         }
 
@@ -343,7 +359,7 @@ namespace AudioReceiver
             }
         }
 
-        private void RefreshAllWpfPlots()
+        private void RefreshAllWpfPlots(WpfPlotsRefreshType refreshType)
         {
             for(int i = 0; i < channelCount; i++)
             {
@@ -355,7 +371,10 @@ namespace AudioReceiver
 
                 plotBuffers[i].Clear();
                 plotBuffers[i].AddRange(buffers[i]);
-                wpfPlots[i].Plot.Axes.SetLimitsX(0, bufferCount);
+
+                if(refreshType == WpfPlotsRefreshType.SetAxesLimits)
+                    wpfPlots[i].Plot.Axes.SetLimitsX(0, bufferCount);
+
                 wpfPlots[i].Refresh();
             }
         }
