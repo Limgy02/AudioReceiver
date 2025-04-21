@@ -34,7 +34,7 @@ namespace AudioReceiver
 
         List<WpfPlot> wpfPlots = new List<WpfPlot>();
 
-        private Thread receiveThread;
+        private Thread? receiveThread;
         private DispatcherTimer plotTimer;
 
         public MainWindow()
@@ -92,7 +92,7 @@ namespace AudioReceiver
                     isReceiving = true;
                     if (checkBox_SaveToFiles.IsChecked == true)
                         StreamWritersInit();
-                    serialPort.Open();
+                    serialPort!.Open();
                     receiveThread = new Thread(ReceiveLoop);
                     receiveThread.IsBackground = true;
                     receiveThread.Start();
@@ -214,7 +214,7 @@ namespace AudioReceiver
             }
         }
 
-        private bool TestSerialPortAvaliableOrNot(SerialPort serialPort)
+        private bool TestSerialPortAvaliableOrNot(SerialPort? serialPort)
         {
             if(serialPort is null)
             {
@@ -244,9 +244,9 @@ namespace AudioReceiver
             if(isReceiving)
             {
                 isReceiving = false;
-                receiveThread.Join(); // Prevent StreamWriter closing before receiveThread really stopped.
+                receiveThread!.Join(); // Prevent StreamWriter closing before receiveThread really stopped.
                 StreamWritersClose();
-                serialPort.Close();
+                serialPort!.Close();
             }
         }
 
@@ -264,7 +264,7 @@ namespace AudioReceiver
             while (isReceiving)
             {
                 byte[] buffer = new byte[4 * receiveBufferCount];
-                if(serialPort.BytesToRead >= buffer.Length)
+                if(serialPort!.BytesToRead >= buffer.Length)
                 {
                     serialPort.Read(buffer, 0, buffer.Length);
 
